@@ -7,7 +7,9 @@ import TabNavigation from './components/TabNavigation';
 import VotingArea from './components/VotingArea';
 import ResultsView from './components/ResultsView';
 import AdminPanel from './components/AdminPanel';
+import FoodPlanning from './components/FoodPlanning';
 import Footer from './components/Footer';
+import { mealPlanningData } from './data/mealPlanningData';
 
 // Mock data for initial weekend options
 const mockData = [
@@ -54,7 +56,8 @@ function App() {
   const [weekendOptions, setWeekendOptions] = useState(mockData);
   const [currentUser, setCurrentUser] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [activeTab, setActiveTab] = useState('vote'); // 'vote' or 'results'
+  const [activeTab, setActiveTab] = useState('vote'); // 'vote', 'results', or 'food'
+  const [mealPlans, setMealPlans] = useState(mealPlanningData);
 
   // Check if user is returning from local storage
   useEffect(() => {
@@ -138,6 +141,11 @@ function App() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  // Handle updating meal planning data
+  const handleUpdateMealPlan = (updatedMealPlan) => {
+    setMealPlans(updatedMealPlan);
+  };
+
   return (
     <div className="min-vh-100 d-flex flex-column bg-light">
       <Header 
@@ -166,12 +174,18 @@ function App() {
                   formatShortDate={formatShortDate}
                   isAdmin={isAdmin}
                 />
-              ) : (
+              ) : activeTab === 'results' ? (
                 <ResultsView 
                   weekendOptions={weekendOptions}
                   currentUser={currentUser}
                   calculateWinner={calculateWinner}
                   formatShortDate={formatShortDate}
+                />
+              ) : (
+                <FoodPlanning 
+                  currentUser={currentUser}
+                  weekendData={calculateWinner()}
+                  onUpdateMealPlan={handleUpdateMealPlan}
                 />
               )}
             </div>
