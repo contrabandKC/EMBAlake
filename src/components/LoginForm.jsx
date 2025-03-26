@@ -9,8 +9,14 @@ const LoginForm = ({ onLogin }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (username.trim()) {
-      onLogin(username);
+    const trimmedName = username.trim();
+    if (trimmedName) {
+      // Create a proper user object
+      const userObj = {
+        name: trimmedName,
+        joinedAt: new Date().toISOString()
+      };
+      onLogin(userObj);
     }
   };
 

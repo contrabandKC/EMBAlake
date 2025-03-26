@@ -13,10 +13,16 @@ const WeekendCard = ({
   isAdmin, 
   formatShortDate 
 }) => {
-  const hasVoted = currentUser && weekend.votes && weekend.votes.includes(currentUser);
+  // Check if votes exists and if it's a number (new structure) or an array (old structure)
+  const voteCount = typeof weekend.votes === 'number' ? weekend.votes : 
+                    (Array.isArray(weekend.votes) ? weekend.votes.length : 0);
+  
+  // For the new structure, we can't check if the user has voted
+  // So we'll just disable this feature for now
+  const hasVoted = false; // Previously: currentUser && weekend.votes && weekend.votes.includes(currentUser);
+  
   const startDate = new Date(weekend.startDate);
   const endDate = new Date(weekend.endDate);
-  const voteCount = weekend.votes ? weekend.votes.length : 0;
   
   return (
     <Card className="h-100 shadow border-0" style={{
@@ -111,49 +117,29 @@ const WeekendCard = ({
         borderTop: hasVoted ? '1px solid rgba(0, 102, 204, 0.1)' : '1px solid rgba(0, 0, 0, 0.1)',
         padding: '1rem'
       }}>
-        {hasVoted ? (
-          <Button
-            className="w-100 d-flex align-items-center justify-content-center"
-            onClick={() => onRemoveVote(weekend.id)}
-            style={{
-              background: 'white',
-              color: '#0066CC',
-              borderColor: '#0066CC',
-              borderWidth: '2px',
-              fontWeight: '500',
-              transition: 'all 0.2s',
-              boxShadow: '0 2px 4px rgba(0, 51, 102, 0.05)'
-            }}
-          >
-            <svg width="16" height="16" fill="currentColor" className="me-2" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"></path>
-            </svg>
-            I Can't Make It
-          </Button>
-        ) : (
-          <Button
-            className="w-100 d-flex align-items-center justify-content-center"
-            onClick={() => onVote(weekend.id)}
-            style={{
-              background: 'linear-gradient(to right, #0066CC, #004999)',
-              borderColor: 'transparent',
-              fontWeight: '500',
-              transition: 'all 0.2s',
-              boxShadow: '0 4px 6px rgba(0, 51, 102, 0.15)'
-            }}
-          >
-            <svg width="16" height="16" fill="currentColor" className="me-2" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z"></path>
-            </svg>
-            I'm In!
-          </Button>
-        )}
+        {/* We don't use hasVoted anymore since we can't track individual votes */}
+        <Button
+          className="w-100 d-flex align-items-center justify-content-center"
+          onClick={() => onVote(weekend.id)}
+          style={{
+            background: 'linear-gradient(to right, #0066CC, #004999)',
+            borderColor: 'transparent',
+            fontWeight: '500',
+            transition: 'all 0.2s',
+            boxShadow: '0 4px 6px rgba(0, 51, 102, 0.15)'
+          }}
+        >
+          <svg width="16" height="16" fill="currentColor" className="me-2" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z"></path>
+          </svg>
+          Vote For This Weekend
+        </Button>
         
         {isAdmin && (
           <Button
             variant="link"
             className="w-100 mt-2 d-flex align-items-center justify-content-center"
-            onClick={() => onRemoveWeekend(weekend.id)}
+            onClick={() => onRemoveWeekend && onRemoveWeekend(weekend.id)}
             style={{
               color: '#dc3545',
               textDecoration: 'none',

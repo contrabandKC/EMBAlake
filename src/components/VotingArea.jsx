@@ -7,16 +7,19 @@ import WeekendCard from './WeekendCard';
  * Displays and organizes weekend options by year for voting
  */
 const VotingArea = ({ 
-  weekendOptions, 
+  weekends, // Previously named weekendOptions
   currentUser, 
-  onVote, 
+  onVote,
   onRemoveVote, 
   onRemoveWeekend, 
   formatShortDate,
   isAdmin 
 }) => {
+  // Handle potential undefined weekends
+  const options = weekends || [];
+  
   // Group weekend options by year
-  const weekendsByYear = weekendOptions.reduce((acc, weekend) => {
+  const weekendsByYear = options.reduce((acc, weekend) => {
     const year = new Date(weekend.startDate).getFullYear();
     if (!acc[year]) {
       acc[year] = [];
@@ -123,7 +126,7 @@ const VotingArea = ({
       )}
       
       {/* Info Box at the Bottom */}
-      {currentUser && weekendOptions.length > 0 && (
+      {currentUser && options.length > 0 && (
         <Alert 
           className="d-flex align-items-center mt-4 border-0"
           style={{ 

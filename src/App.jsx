@@ -1,205 +1,164 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Container } from 'react-bootstrap';
+import { Container, Alert } from 'react-bootstrap';
 import Header from './components/Header';
-import LoginForm from './components/LoginForm';
+import Footer from './components/Footer';
 import TabNavigation from './components/TabNavigation';
 import VotingArea from './components/VotingArea';
 import ResultsView from './components/ResultsView';
 import AdminPanel from './components/AdminPanel';
 import FoodPlanning from './components/FoodPlanning';
-import Footer from './components/Footer';
-import { mealPlanningData } from './data/mealPlanningData';
-
-// Mock data for initial weekend options
-const mockData = [
-  {
-    id: "1",
-    startDate: "2025-05-23",
-    endDate: "2025-05-25",
-    votes: []
-  },
-  {
-    id: "2",
-    startDate: "2025-06-06",
-    endDate: "2025-06-08",
-    votes: []
-  },
-  {
-    id: "3",
-    startDate: "2025-06-20",
-    endDate: "2025-06-22",
-    votes: []
-  },
-  {
-    id: "4",
-    startDate: "2025-07-11",
-    endDate: "2025-07-13",
-    votes: []
-  },
-  {
-    id: "5",
-    startDate: "2026-05-22",
-    endDate: "2026-05-24",
-    votes: []
-  },
-  {
-    id: "6",
-    startDate: "2026-06-05",
-    endDate: "2026-06-07",
-    votes: []
-  }
-];
+import RoomPlanning from './components/RoomPlanning';
+import MessageBoard from './components/MessageBoard';
+import LoginForm from './components/LoginForm';
+import { weekendOptions } from './data/weekendOptions';
+import mealPlanningData from './data/mealPlanningData';
+import FAQ from './components/FAQ';
 
 function App() {
-  // State management
-  const [weekendOptions, setWeekendOptions] = useState(mockData);
-  const [currentUser, setCurrentUser] = useState('');
+  const [weekends, setWeekends] = useState(weekendOptions);
+  const [currentUser, setCurrentUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [activeTab, setActiveTab] = useState('vote'); // 'vote', 'results', or 'food'
+  const [activeTab, setActiveTab] = useState('results');
   const [mealPlans, setMealPlans] = useState(mealPlanningData);
 
-  // Check if user is returning from local storage
+  // Load user from localStorage on component mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      setCurrentUser(savedUser);
-      setIsAdmin(savedUser.toLowerCase() === 'john');
+    // Clear any potential corrupted data
+    try {
+      const savedUser = localStorage.getItem('currentUser');
+      if (savedUser) {
+        try {
+          const user = JSON.parse(savedUser);
+          setCurrentUser(user);
+          setIsAdmin(user.name === 'John');
+        } catch (error) {
+          console.error('Error parsing saved user data:', error);
+          localStorage.removeItem('currentUser'); // Clear invalid data
+        }
+      }
+    } catch (error) {
+      console.error('Error accessing localStorage:', error);
+      // Clear everything if localStorage is corrupted
+      try {
+        localStorage.clear();
+      } catch (e) {
+        console.error('Could not clear localStorage:', e);
+      }
     }
   }, []);
 
-  // Handle user login
-  const handleLogin = (username) => {
-    const name = username.trim();
-    if (name) {
-      setCurrentUser(name);
-      localStorage.setItem('currentUser', name);
-      
-      // Check if user is admin (John)
-      setIsAdmin(name.toLowerCase() === 'john');
-    }
+  const handleLogin = (user) => {
+    setCurrentUser(user);
+    setIsAdmin(user.name === 'John');
+    localStorage.setItem('currentUser', JSON.stringify(user));
   };
 
-  // Handle adding a new weekend option
-  const handleAddWeekend = (startDate, endDate) => {
-    const newWeekend = {
-      id: Date.now().toString(),
-      startDate,
-      endDate,
-      votes: []
-    };
-    setWeekendOptions(prev => [...prev, newWeekend]);
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setIsAdmin(false);
+    localStorage.removeItem('currentUser');
   };
 
-  // Handle removing a weekend option
-  const handleRemoveWeekend = (weekendId) => {
-    setWeekendOptions(prev => prev.filter(weekend => weekend.id !== weekendId));
+  const handleAddWeekend = (newWeekend) => {
+    setWeekends([...weekends, { ...newWeekend, id: Date.now(), votes: 0 }]);
   };
 
-  // Handle voting for a weekend
   const handleVote = (weekendId) => {
-    if (!currentUser) return;
-    
-    setWeekendOptions(prev => 
-      prev.map(weekend => {
-        if (weekend.id === weekendId && !weekend.votes.includes(currentUser)) {
-          return { ...weekend, votes: [...weekend.votes, currentUser] };
-        }
-        return weekend;
-      })
-    );
+    setWeekends(weekends.map(weekend => 
+      weekend.id === weekendId 
+        ? { ...weekend, votes: weekend.votes + 1 }
+        : weekend
+    ));
   };
 
-  // Handle removing a vote
-  const handleRemoveVote = (weekendId) => {
-    if (!currentUser) return;
-    
-    setWeekendOptions(prev => 
-      prev.map(weekend => {
-        if (weekend.id === weekendId && weekend.votes.includes(currentUser)) {
-          return { 
-            ...weekend, 
-            votes: weekend.votes.filter(voter => voter !== currentUser) 
-          };
-        }
-        return weekend;
-      })
-    );
-  };
-
-  // Calculate the winning weekend
-  const calculateWinner = () => {
-    if (weekendOptions.length === 0) return null;
-    
-    const sortedOptions = [...weekendOptions].sort((a, b) => b.votes.length - a.votes.length);
-    return sortedOptions[0].votes.length > 0 ? sortedOptions[0] : null;
-  };
-
-  // Format date for display
-  const formatShortDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  // Handle updating meal planning data
   const handleUpdateMealPlan = (updatedMealPlan) => {
     setMealPlans(updatedMealPlan);
   };
 
-  return (
-    <div className="min-vh-100 d-flex flex-column bg-light">
-      <Header 
-        currentUser={currentUser} 
-        isAdmin={isAdmin}
-      />
-      
-      <Container className="flex-grow-1 py-4">
-        {!currentUser ? (
+  const calculateWinningWeekend = () => {
+    return weekends.reduce((prev, current) => 
+      (prev.votes > current.votes) ? prev : current
+    );
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  if (!currentUser) {
+    return (
+      <div className="min-vh-100 d-flex flex-column">
+        <Header />
+        <Container className="flex-grow-1 d-flex align-items-center justify-content-center py-5">
           <LoginForm onLogin={handleLogin} />
-        ) : (
-          <>
-            <TabNavigation 
-              activeTab={activeTab} 
-              onTabChange={setActiveTab} 
-            />
-            
-            <div className="bg-white rounded shadow-sm p-4 mt-3">
-              {activeTab === 'vote' ? (
-                <VotingArea 
-                  weekendOptions={weekendOptions}
-                  currentUser={currentUser}
-                  onVote={handleVote}
-                  onRemoveVote={handleRemoveVote}
-                  onRemoveWeekend={handleRemoveWeekend}
-                  formatShortDate={formatShortDate}
-                  isAdmin={isAdmin}
-                />
-              ) : activeTab === 'results' ? (
-                <ResultsView 
-                  weekendOptions={weekendOptions}
-                  currentUser={currentUser}
-                  calculateWinner={calculateWinner}
-                  formatShortDate={formatShortDate}
-                />
-              ) : (
-                <FoodPlanning 
-                  currentUser={currentUser}
-                  weekendData={calculateWinner()}
-                  onUpdateMealPlan={handleUpdateMealPlan}
-                />
-              )}
-            </div>
-            
-            {isAdmin && (
-              <div className="mt-4">
-                <AdminPanel onAddWeekend={handleAddWeekend} />
-              </div>
-            )}
-          </>
+        </Container>
+        <Footer />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-vh-100 d-flex flex-column">
+      <Header currentUser={currentUser} onLogout={handleLogout} />
+      <Container className="flex-grow-1 py-4">
+        <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+        
+        {activeTab === 'vote' && (
+          <VotingArea 
+            weekends={weekends} 
+            onVote={handleVote}
+            currentUser={currentUser}
+            formatShortDate={formatDate}
+            isAdmin={isAdmin}
+          />
+        )}
+        
+        {activeTab === 'results' && (
+          <ResultsView 
+            weekends={weekends}
+            winningWeekend={calculateWinningWeekend()}
+            formatDate={formatDate}
+          />
+        )}
+        
+        {activeTab === 'food' && (
+          <FoodPlanning 
+            currentUser={currentUser}
+            weekendData={calculateWinningWeekend()}
+            mealPlans={mealPlans}
+            onUpdateMealPlan={handleUpdateMealPlan}
+          />
+        )}
+
+        {activeTab === 'rooms' && (
+          <RoomPlanning 
+            currentUser={currentUser}
+            weekendData={calculateWinningWeekend()}
+          />
+        )}
+
+        {activeTab === 'messages' && (
+          <MessageBoard currentUser={currentUser} />
+        )}
+
+        {activeTab === 'faq' && (
+          <FAQ />
+        )}
+        
+        {isAdmin && activeTab === 'admin' && (
+          <AdminPanel 
+            weekends={weekends}
+            onAddWeekend={handleAddWeekend}
+          />
         )}
       </Container>
-      
-      <Footer currentYear={new Date().getFullYear()} />
+      <Footer />
     </div>
   );
 }

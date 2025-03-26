@@ -5,12 +5,19 @@ import { Card, ProgressBar, Badge, Row, Col, Alert } from 'react-bootstrap';
  * ResultsView component with UMKC EMBA and Lake of the Ozarks theme
  * Shows the winning weekend and votes for all options
  */
-const ResultsView = ({ weekendOptions, currentUser, calculateWinner, formatShortDate }) => {
-  // Sort weekends by vote count (highest first)
-  const sortedWeekends = [...weekendOptions].sort((a, b) => b.votes.length - a.votes.length);
+const ResultsView = ({ weekends, winningWeekend, formatDate }) => {
+  // Ensure weekends is an array to prevent "not iterable" errors
+  const weekendOptions = Array.isArray(weekends) ? weekends : [];
   
-  // Get the winning weekend (if any)
-  const winner = calculateWinner();
+  // Sort weekends by vote count (highest first)
+  const sortedWeekends = [...weekendOptions].sort((a, b) => {
+    const votesA = typeof a.votes === 'number' ? a.votes : (Array.isArray(a.votes) ? a.votes.length : 0);
+    const votesB = typeof b.votes === 'number' ? b.votes : (Array.isArray(b.votes) ? b.votes.length : 0);
+    return votesB - votesA;
+  });
+  
+  // Get the winning weekend
+  const winner = winningWeekend || (sortedWeekends.length > 0 ? sortedWeekends[0] : null);
   
   // Group weekend options by year
   const weekendsByYear = weekendOptions.reduce((acc, weekend) => {
@@ -28,7 +35,18 @@ const ResultsView = ({ weekendOptions, currentUser, calculateWinner, formatShort
     .sort((a, b) => b - a);
   
   // Find maximum vote count for relative scaling
-  const maxVotes = sortedWeekends.length > 0 ? sortedWeekends[0].votes.length : 0;
+  const maxVotes = sortedWeekends.length > 0 ? 
+    (typeof sortedWeekends[0].votes === 'number' ? 
+      sortedWeekends[0].votes : 
+      (Array.isArray(sortedWeekends[0].votes) ? sortedWeekends[0].votes.length : 0)) 
+    : 0;
+
+  // Helper function to get vote count
+  const getVoteCount = (weekend) => {
+    return typeof weekend.votes === 'number' ? 
+      weekend.votes : 
+      (Array.isArray(weekend.votes) ? weekend.votes.length : 0);
+  };
   
   return (
     <div>
@@ -83,7 +101,7 @@ const ResultsView = ({ weekendOptions, currentUser, calculateWinner, formatShort
                   fontWeight: '600'
                 }}
               >
-                {winner.votes.length} Vote{winner.votes.length !== 1 ? 's' : ''}
+                {getVoteCount(winner)} Vote{getVoteCount(winner) !== 1 ? 's' : ''}
               </Badge>
             </div>
             
@@ -91,22 +109,21 @@ const ResultsView = ({ weekendOptions, currentUser, calculateWinner, formatShort
               <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
                 <div className="mb-2 mb-md-0">
                   <div className="fs-5 mb-1" style={{ fontWeight: '600' }}>
-                    {formatShortDate(winner.startDate)} - {formatShortDate(winner.endDate)}
+                    {formatDate(winner.startDate)} - {formatDate(winner.endDate)}
                   </div>
                   <div className="d-flex flex-wrap gap-1 mt-2">
-                    {winner.votes.slice(0, 3).map(voter => (
+                    {Array.isArray(winner.votes) && winner.votes.slice(0, 3).map(voter => (
                       <Badge key={voter} 
                         style={{ 
                           background: 'rgba(255, 255, 255, 0.25)', 
-                          color: 'white',
-                          border: voter === currentUser ? '1px solid #FFD200' : 'none'
+                          color: 'white'
                         }} 
                         className="me-1"
                       >
-                        {voter} {voter === currentUser && '(You)'}
+                        {voter}
                       </Badge>
                     ))}
-                    {winner.votes.length > 3 && (
+                    {Array.isArray(winner.votes) && winner.votes.length > 3 && (
                       <Badge style={{ background: 'rgba(255, 255, 255, 0.25)', color: 'white' }}>
                         +{winner.votes.length - 3} more
                       </Badge>
@@ -117,20 +134,20 @@ const ResultsView = ({ weekendOptions, currentUser, calculateWinner, formatShort
                 <div className="d-flex align-items-center">
                   <div className="me-3 text-center">
                     <div className="fw-bold mb-1" style={{ fontSize: '1.2rem' }}>
-                      {Math.round((winner.votes.length / weekendOptions.reduce((sum, w) => sum + (w.votes.length > 0 ? 1 : 0), 0)) * 100)}%
+                      {Math.round((getVoteCount(winner) / weekendOptions.reduce((sum, w) => sum + (getVoteCount(w) > 0 ? 1 : 0), 0)) * 100) || 0}%
                     </div>
                     <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.8rem' }}>of voters</div>
                   </div>
                   
                   <div className="position-relative" style={{ width: '70px', height: '70px' }}>
                     <div className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
-                      <div className="fs-4 fw-bold">{winner.votes.length}</div>
+                      <div className="fs-4 fw-bold">{getVoteCount(winner)}</div>
                     </div>
                     <svg width="70" height="70" viewBox="0 0 120 120">
                       <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="12" />
                       <circle cx="60" cy="60" r="54" fill="none" stroke="#FFD200" strokeWidth="12" 
                         strokeDasharray="339.292" 
-                        strokeDashoffset={339.292 * (1 - winner.votes.length / (maxVotes || 1))} 
+                        strokeDashoffset={339.292 * (1 - getVoteCount(winner) / (maxVotes || 1))} 
                         transform="rotate(-90 60 60)" />
                     </svg>
                   </div>
@@ -159,7 +176,7 @@ const ResultsView = ({ weekendOptions, currentUser, calculateWinner, formatShort
             
             <Row xs={1} lg={2} className="g-4">
               {weekendsByYear[year]
-                .sort((a, b) => b.votes.length - a.votes.length)
+                .sort((a, b) => getVoteCount(b) - getVoteCount(a))
                 .map(weekend => (
                   <Col key={weekend.id}>
                     <Card className="h-100 shadow-sm border-0" style={{
@@ -178,22 +195,22 @@ const ResultsView = ({ weekendOptions, currentUser, calculateWinner, formatShort
                             color: '#003366',
                             fontWeight: '600'
                           }}>
-                            {formatShortDate(weekend.startDate)} - {formatShortDate(weekend.endDate)}
+                            {formatDate(weekend.startDate)} - {formatDate(weekend.endDate)}
                           </h5>
                           <Badge pill style={{ 
-                            background: weekend.votes.length > 0 
+                            background: getVoteCount(weekend) > 0 
                               ? 'linear-gradient(to right, #0066CC, #004999)' 
                               : '#6c757d',
                             color: 'white',
                             padding: '0.4rem 0.8rem'
                           }}>
-                            {weekend.votes.length} Vote{weekend.votes.length !== 1 ? 's' : ''}
+                            {getVoteCount(weekend)} Vote{getVoteCount(weekend) !== 1 ? 's' : ''}
                           </Badge>
                         </div>
                         
                         <div className="mb-3">
                           <ProgressBar 
-                            now={maxVotes ? (weekend.votes.length / maxVotes) * 100 : 0} 
+                            now={maxVotes ? (getVoteCount(weekend) / maxVotes) * 100 : 0} 
                             style={{ 
                               height: '10px',
                               borderRadius: '5px',
@@ -203,25 +220,28 @@ const ResultsView = ({ weekendOptions, currentUser, calculateWinner, formatShort
                           />
                         </div>
                         
-                        {weekend.votes.length > 0 ? (
+                        {getVoteCount(weekend) > 0 ? (
                           <div>
                             <div className="small mb-2" style={{ color: '#0066CC' }}>Voted by:</div>
                             <div className="d-flex flex-wrap gap-1">
-                              {weekend.votes.map(voter => (
+                              {Array.isArray(weekend.votes) && weekend.votes.map(voter => (
                                 <Badge 
                                   key={voter} 
                                   bg="light"
                                   text="dark"
                                   style={{
-                                    border: voter === currentUser ? '1px solid #0066CC' : 'none',
-                                    backgroundColor: voter === currentUser ? 'rgba(0, 102, 204, 0.1)' : '#f8f9fa',
-                                    color: voter === currentUser ? '#0066CC' : '#495057'
+                                    backgroundColor: '#f8f9fa',
+                                    color: '#495057'
                                   }}
                                 >
                                   {voter}
-                                  {voter === currentUser && ' (You)'}
                                 </Badge>
                               ))}
+                              {!Array.isArray(weekend.votes) && (
+                                <Badge bg="light" text="dark">
+                                  {getVoteCount(weekend)} vote{getVoteCount(weekend) !== 1 ? 's' : ''}
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         ) : (
@@ -248,29 +268,20 @@ const ResultsView = ({ weekendOptions, currentUser, calculateWinner, formatShort
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"></path>
           </svg>
           <div style={{ color: '#003366' }}>
-            No weekend options have been added yet for the UMKC EMBA Lake trip. Check back later!
+            No weekend options have been added yet. Check back later or add some options in the Admin Panel if you have access.
           </div>
         </Alert>
       )}
       
-      {weekendOptions.length > 0 && weekendOptions.every(w => w.votes.length === 0) && (
-        <Alert 
-          className="d-flex align-items-center mt-4 border-0"
-          style={{ 
-            background: 'linear-gradient(to right, rgba(78, 205, 196, 0.15), rgba(44, 153, 190, 0.1))',
-            borderLeft: '4px solid #2C99BE',
-            borderRadius: '0.5rem',
-            padding: '1.25rem'
-          }}
-        >
-          <svg width="24" height="24" fill="#0066CC" className="me-3" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"></path>
-          </svg>
-          <div style={{ color: '#003366' }}>
-            No votes have been cast yet for the Lake of the Ozarks trip. Be the first to vote for your preferred weekends!
-          </div>
-        </Alert>
-      )}
+      {/* Explanation Section */}
+      <div className="mt-5 pt-3 border-top">
+        <h4 className="mb-3" style={{ color: '#003366' }}>How Voting Works</h4>
+        <p className="text-muted">
+          The weekend with the most votes will be chosen for our EMBA Lake Trip. Voting is done on a per-person basis,
+          and the final decision will be announced once all votes are in. If you need to change your vote, you can do so
+          in the "Vote for Weekends" tab.
+        </p>
+      </div>
     </div>
   );
 };
